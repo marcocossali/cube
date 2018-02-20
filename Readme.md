@@ -1,0 +1,6 @@
+# Run:
+
+`qmake`
+
+`make`
+
