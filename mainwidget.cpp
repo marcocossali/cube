@@ -1,9 +1,5 @@
 #include "mainwidget.h"
-
-//#include <QKeyEvent>
-
 #include <QMouseEvent>
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,9 +17,8 @@ MainWidget::MainWidget(QWidget *parent) : QOpenGLWidget(parent), geometries(0), 
     timestamp_actual = 0.0f;
     timestamp_first = 0.0f;
     timestamp_result = 0.0f;
-    alpha = 0.99;
+    alpha = 0.95;
     enable_param();
-
 }
 
 MainWidget::~MainWidget(){
@@ -72,6 +67,8 @@ void MainWidget::enable_param(){
 
     device_acc = find_device_number("lsm6dsl_accel");
     device_gyro = find_device_number("lsm6dsl_gyro");
+
+    qDebug() << QString("%1").arg(device_acc) << "," << QString("%1").arg(device_gyro);
 
     sprintf(path, "/sys/bus/iio/devices/iio:device%d/scan_elements/in_accel_x_en", device_acc);
     file = fopen(path, "w");
@@ -135,7 +132,8 @@ void MainWidget::enable_param(){
         fclose(file);
     }
 
-    fd_acc = open("/dev/iio:device1", O_RDONLY | O_NONBLOCK);
+    sprintf(path, "/dev/iio:device%d", device_acc);
+    fd_acc = open(path, O_RDONLY | O_NONBLOCK);
 
     sprintf(path, "/sys/bus/iio/devices/iio:device%d/scan_elements/in_anglvel_x_en", device_gyro);
     file = fopen(path, "w");
@@ -196,7 +194,9 @@ void MainWidget::enable_param(){
         fprintf(file,"%s", "1");
         fclose(file);
     }
-    fd_gyro = open("/dev/iio:device2", O_RDONLY | O_NONBLOCK);
+
+    sprintf(path, "/dev/iio:device%d", device_gyro);
+    fd_gyro = open(path, O_RDONLY | O_NONBLOCK);
 }
 
 void MainWidget::mousePressEvent(QMouseEvent *e){
@@ -212,92 +212,6 @@ void MainWidget::mousePressEvent(QMouseEvent *e){
          qDebug() << "Tap the cube";
 }
 
-/*
- *
-// Use keyboard to use the app
-void MainWidget::keyPressEvent(QKeyEvent *event){
-    if (event->key() == Qt::Key_S){
-
-        if(check_start == 0){
-
-            // Enable channel for use the buffer, set frequency, buffer length and buffer watermark
-            file = fopen("/sys/bus/iio/devices/iio:device1/scan_elements/in_accel_x_en", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device1/scan_elements/in_accel_y_en", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device1/scan_elements/in_accel_z_en", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device1/scan_elements/in_timestamp_en", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device1/sampling_frequency", "w");
-            fprintf(file,"%s", "208");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device1/buffer/enable", "w");
-            fprintf(file,"%s", "0");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device1/buffer/length", "w");
-            fprintf(file,"%s", "25");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device1/buffer/watermark", "w");
-            fprintf(file,"%s", "12");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device1/buffer/enable", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            fd_acc = open("/dev/iio:device1", O_RDONLY | O_NONBLOCK);
-
-
-            file = fopen("/sys/bus/iio/devices/iio:device2/scan_elements/in_anglvel_x_en", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device2/scan_elements/in_anglvel_y_en", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device2/scan_elements/in_anglvel_z_en", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device2/scan_elements/in_timestamp_en", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device2/sampling_frequency", "w");
-            fprintf(file,"%s", "208");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device2/buffer/enable", "w");
-            fprintf(file,"%s", "0");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device2/buffer/length", "w");
-            fprintf(file,"%s", "25");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device2/buffer/watermark", "w");
-            fprintf(file,"%s", "12");
-            fclose(file);
-            file = fopen("/sys/bus/iio/devices/iio:device2/buffer/enable", "w");
-            fprintf(file,"%s", "1");
-            fclose(file);
-            fd_gyro = open("/dev/iio:device2", O_RDONLY | O_NONBLOCK);
-
-            check = 1;
-            check_start = 1;
-        }
-        else
-            check = 1;
-    }
-    else if(event->key() == Qt::Key_C){
-        // Reset angle value
-        pitch = 0;
-        roll = 0;
-        yaw_gyro = 0;
-    }
-    else if(event->key() == Qt::Key_Q)
-        // Stop acquisition
-        check = 0;
-}
-*/
-
 void MainWidget::timerEvent(QTimerEvent *){
 
     while(1){
@@ -312,13 +226,6 @@ void MainWidget::timerEvent(QTimerEvent *){
             y_gyro = *((int16_t*)(dati_gyro+2));
             z_gyro = *((int16_t*)(dati_gyro+4));
 
-            // LP filter acc data
-            /*
-            f_x_acc = x_acc*alpha + (f_x_acc * (1-alpha));
-            f_y_acc = y_acc*alpha + (f_y_acc * (1-alpha));
-            f_z_acc = z_acc*alpha + (f_z_acc * (1-alpha));
-            */
-
             if (check_timestamp == 0){
                 timestamp_first = *((int64_t*)(dati_gyro+8));
                 check_timestamp = 1;
@@ -329,14 +236,6 @@ void MainWidget::timerEvent(QTimerEvent *){
                 timestamp_first = timestamp_actual;
 
                 if(x_gyro > 100 || x_gyro < -100 || y_gyro > 100 || y_gyro < -100 || z_gyro > 100 || z_gyro < -100){
-
-                    // Pitch & roll calculated with only accelerometer data
-                    /*
-                    pitch_acc = atan2(-f_x_acc,sqrt(f_y_acc*f_y_acc+f_z_acc*f_z_acc))*180/M_PI;
-                    printf("pitch: %d, ", (int)pitch_acc);
-                    roll_acc = atan2(f_y_acc,sqrt(f_x_acc*f_x_acc+f_z_acc*f_z_acc))*180/M_PI;
-                    printf("roll: %d, ", (int)roll_acc);
-                    */
 
                     // Pitch & roll calculated with complementary filter (accelerometer and gyroscope data)
                     pitch = alpha*(pitch + (y_gyro*timestamp_result)*0.000000000009) + (1 - alpha)*(atan2(-x_acc,sqrt(y_acc*y_acc+z_acc*z_acc))*180/M_PI);
